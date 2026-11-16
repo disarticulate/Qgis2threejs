@@ -34,11 +34,18 @@ export interface MapExtent {
     height: number;
 }
 
+export interface DistanceUnits {
+    xy: string;              // abbreviated unit of the map (X and Y) coordinates, e.g. "m" or "ft"
+    z: string;               // abbreviated unit of elevation (Z) values
+    zToMap: number;          // factor converting an elevation value into the map units
+}
+
 /* Properties */
 export interface SceneProperties {
 	baseExtent: MapExtent;	 // map base extent in map coordinates. center is (cx, cy).
 	origin: Point3;		     // origin of 3D world in map coordinates
 	zScale: number;			 // vertical scale factor
+    units?: DistanceUnits;   // absent in scenes built before units were exported
     light: string;
     fog?: {
         color: number;

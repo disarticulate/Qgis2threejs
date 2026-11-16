@@ -6,7 +6,7 @@
 from threading import Lock
 import traceback
 
-from qgis.core import QgsApplication
+from qgis.core import QgsApplication, QgsUnitTypes
 from qgis.PyQt.QtCore import QObject, pyqtSignal, pyqtSlot
 
 from ..const import LayerType
@@ -172,7 +172,12 @@ class ThreeJSBuilder(QObject):
                 "y": mapTo3d.origin.y(),
                 "z": mapTo3d.origin.z()
             },
-            "zScale": mapTo3d.zScale
+            "zScale": mapTo3d.zScale,
+            "units": {
+                "xy": QgsUnitTypes.toAbbreviatedString(settings.mapUnits()),
+                "z": QgsUnitTypes.toAbbreviatedString(settings.elevationUnits()),
+                "zToMap": settings.elevationToMapUnitFactor()
+            }
         }
 
         sp = settings.sceneProperties()

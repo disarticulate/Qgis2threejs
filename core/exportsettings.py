@@ -10,7 +10,7 @@ import os
 import re
 
 from qgis.PyQt.QtCore import QSettings, QSize, QUrl
-from qgis.core import QgsMapSettings, QgsPoint, QgsPointXY, QgsProject
+from qgis.core import Qgis, QgsMapSettings, QgsPoint, QgsPointXY, QgsProject, QgsUnitTypes
 
 from .const import ATConst, GEOM_WIDGET_MAX_COUNT, LayerType
 from .mapextent import MapExtent
@@ -283,6 +283,38 @@ class ExportSettings:
 
         return self._baseExtent
 
+    def mapUnits(self):
+        """Returns units of the map (X and Y) coordinates of the scene."""
+        if self.crs is None:
+            return Qgis.DistanceUnit.Unknown
+
+        return self.crs.mapUnits()
+
+    def elevationUnits(self):
+        """Returns units of elevation (Z) values.
+
+        Units of the vertical CRS of the scene CRS are used if it is set.
+        Otherwise the map units are assumed, which is the case of most projects.
+        """
+        if self.crs is None:
+            return Qgis.DistanceUnit.Unknown
+
+        vcs = self.crs.verticalCrs()
+        units = vcs.mapUnits() if vcs.isValid() else Qgis.DistanceUnit.Unknown
+        if units == Qgis.DistanceUnit.Unknown:
+            units = self.crs.mapUnits()
+
+        return units
+
+    def elevationToMapUnitFactor(self) -> float:
+        """Returns a factor converting an elevation value into the map units of the scene."""
+        z_units = self.elevationUnits()
+        map_units = self.mapUnits()
+        if z_units == Qgis.DistanceUnit.Unknown or map_units == Qgis.DistanceUnit.Unknown:
+            return 1.0
+
+        return QgsUnitTypes.fromUnitToUnitFactor(z_units, map_units)
+
     def mapTo3d(self) -> MapTo3D:
         if self._mapTo3d:
             return self._mapTo3d
@@ -300,6 +332,12 @@ class ExportSettings:
             zScale = DEF_SETS.Z_EXAGGERATION
             zShift = DEF_SETS.Z_SHIFT
             logger.warning("Invalid z exaggeration. Check out scene properties.")
+
+        # Elevation values can be expressed in units other than the map units of the scene CRS
+        # (for example a project CRS in feet with heights referenced to a vertical CRS in metres).
+        # They are converted to the map units here; the Z exaggeration set by the user is applied
+        # on top of that conversion.
+        zScale *= self.elevationToMapUnitFactor()
 
         if sp.get("comboBox_xyShift", True):
             origin = QgsPoint(be.center().x(), be.center().y(), -zShift)

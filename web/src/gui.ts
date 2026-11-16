@@ -201,15 +201,20 @@ gui.showQueryResult = (point, layer, obj, show_coords) => {
             e.classList.remove("hidden");
 
             const pt = app.scene.toMapCoordinates(point);
+            const units = app.scene.userData.units || { xy: "", z: "", zToMap: 1 };
+            const xyUnit = units.xy ? " " + units.xy : "";
+            const zUnit = units.z ? " " + units.z : "";
+            // pt.z is in the map units, elevations are shown in the units of elevation
+            const elev = (pt.z * units.zToMap).toFixed(2);
 
             e = E("qr_coords");
 
             if (conf.coord.latlon) {
                 const lonLat = proj4(app.scene.userData.proj).inverse([pt.x, pt.y]);
-                e.innerHTML = convertToDMS(lonLat[1], lonLat[0]) + ", Elev. " + pt.z.toFixed(2);
+                e.innerHTML = convertToDMS(lonLat[1], lonLat[0]) + ", Elev. " + elev + zUnit;
             }
             else {
-                e.innerHTML = [pt.x.toFixed(2), pt.y.toFixed(2), pt.z.toFixed(2)].join(", ");
+                e.innerHTML = [pt.x.toFixed(2), pt.y.toFixed(2), elev].join(", ") + xyUnit;
             }
         }
         else {
