@@ -403,13 +403,24 @@ class TINGeometry(PolygonGeometry):
         for poly in cls.singleGeometries(g):
             tes.addPolygon(poly, 0)
 
-        fv = memoryview(tes.vertexBuffer()).cast("f")    # [x0, z0, -y0, ...]
+        # QgsTessellator wrote its vertex buffer in the Y-up order [x, z, -y, ...]
+        # in QGIS 3. Since QGIS 4 (3.99) the buffer is always Z-up, i.e. [x, y, z, ...],
+        # and Qgis.TriangulationAlgorithm no longer provides a way to select Y-up output.
+        tessellator_z_up = Qgis.QGIS_VERSION_INT >= 39900
+
+        fv = memoryview(tes.vertexBuffer()).cast("f")    # [x0, y0, z0, ...] (QGIS 3: [x0, z0, -y0, ...])
         floats_per_vertex = tes.stride() // 4            # stride = n * sizeof( float )
 
-        verts = [
-            v_func(fv[i], -fv[i + 2], fv[i + 1])
-            for i in range(0, len(fv), floats_per_vertex)
-        ]
+        if tessellator_z_up:
+            verts = [
+                v_func(fv[i], fv[i + 1], fv[i + 2])
+                for i in range(0, len(fv), floats_per_vertex)
+            ]
+        else:
+            verts = [
+                v_func(fv[i], -fv[i + 2], fv[i + 1])
+                for i in range(0, len(fv), floats_per_vertex)
+            ]
 
         indices = memoryview(tes.indexBuffer()).cast("I")
 
